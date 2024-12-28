@@ -22,7 +22,7 @@ int32_t reduce_avx2(const __m256i &vec)
     return result;
 }
 
-void vector_matmul_scalar(
+void matmul_scalar(
     const int32_t *__restrict__ a,
     const int32_t *__restrict__ b,
     int32_t *__restrict__ c)
@@ -40,25 +40,7 @@ void vector_matmul_scalar(
     }
 }
 
-void vector_matmul_scalar(
-    const int32_t *__restrict__ a,
-    const int32_t *__restrict__ b,
-    int32_t *__restrict__ c)
-{
-    for (int j = 0; j < N; ++j)
-    {
-        for (int i = 0; i < N; ++i)
-        {
-            c[j * N + i] = 0;
-            for (int k = 0; k < N; ++k)
-            {
-                c[j * N + i] += a[j * N + k] * b[i * N + k]; // b is col major
-            }
-        }
-    }
-}
-
-void vector_matmul_avx2(
+void matmul_avx2(
     const int32_t *__restrict__ a,
     const int32_t *__restrict__ b,
     int32_t *__restrict__ c)
@@ -92,7 +74,7 @@ void bench_scalar(const int32_t *__restrict__ a_ptr,
         for (volatile size_t i = 0; i < RUNS; i++)
         {
             TimerScope ts(te);
-            vector_matmul_scalar(a_ptr, b_ptr, c_scalar_ptr);
+            matmul_scalar(a_ptr, b_ptr, c_scalar_ptr);
         }
     }
 }
@@ -106,7 +88,7 @@ void bench_avx2(const int32_t *__restrict__ a_ptr,
         for (volatile size_t i = 0; i < RUNS; i++)
         {
             TimerScope ts(te);
-            vector_matmul_avx2(a_ptr, b_ptr, c_avx_mul_ptr);
+            matmul_avx2(a_ptr, b_ptr, c_avx_mul_ptr);
         }
     }
 }

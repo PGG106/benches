@@ -82,18 +82,45 @@ void wipe(int32_t *p, size_t len)
     }
 }
 
+void bench_scalar(const int32_t *__restrict__ a_ptr,
+                  const int32_t *__restrict__ b_ptr,
+                  int32_t *__restrict__ c_scalar_ptr)
+{
+    {
+        TimerStats te("Scalar Matmul With Mul (vector_matmul_scalar)");
+        for (volatile size_t i = 0; i < RUNS; i++)
+        {
+            TimerScope ts(te);
+            matmul_scalar(a_ptr, b_ptr, c_scalar_ptr);
+        }
+    }
+}
+
+void bench_rvv(const int32_t *__restrict__ a_ptr,
+               const int32_t *__restrict__ b_ptr,
+               int32_t *__restrict__ c_avx_mul_ptr)
+{
+    {
+        TimerStats te("AVX Matmul With Mul (vector_matmul_avx)");
+        for (volatile size_t i = 0; i < RUNS; i++)
+        {
+            TimerScope ts(te);
+            vector_matmul(a_ptr, b_ptr, c_avx_mul_ptr);
+        }
+    }
+}
+
 int main(int argc, char **argv)
 {
     constexpr size_t ALIGNMENT = 32; // 32-byte alignment
 
     auto *a_ptr = static_cast<int32_t *>(aligned_alloc(ALIGNMENT, N * N * sizeof(int32_t)));
     auto *b_ptr = static_cast<int32_t *>(aligned_alloc(ALIGNMENT, N * N * sizeof(int32_t)));
-    auto *bp_ptr = static_cast<uint8_t *>(aligned_alloc(ALIGNMENT, N * N * sizeof(uint8_t)));
     auto *c_scalar_ptr = static_cast<int32_t *>(aligned_alloc(ALIGNMENT, N * N * sizeof(int32_t)));
-    auto *c_avx_shift_ptr = static_cast<int32_t *>(aligned_alloc(ALIGNMENT, N * N * sizeof(int32_t)));
+    auto *c_rvv_ptr = static_cast<int32_t *>(aligned_alloc(ALIGNMENT, N * N * sizeof(int32_t)));
 
     wipe(c_scalar_ptr, N * N);
-    wipe(c_avx_shift_ptr, N * N);
+    wipe(c_rvv_ptr, N * N);
 
     for (size_t j = 0; j < N; j++)
     {
@@ -104,25 +131,11 @@ int main(int argc, char **argv)
         }
     }
 
-    {
-        TimerStats te("Scalar Matmul With Mul");
-        for (volatile size_t i = 0; i < RUNS; i++)
-        {
-            TimerScope ts(te);
-            matmul_scalar(a_ptr, b_ptr, c_scalar_ptr);
-        }
-    }
+    bench_scalar(a_ptr, b_ptr, c_scalar_ptr);
 
-    {
-        TimerStats te("Vec Matmul With Mul");
-        for (volatile size_t i = 0; i < RUNS; i++)
-        {
-            TimerScope ts(te);
-            vector_matmul(a_ptr, b_ptr, c_avx_shift_ptr);
-        }
-    }
+    bench_rvv(a_ptr, b_ptr, c_rvv_ptr);
 
-    verify_results(c_scalar_ptr, c_avx_shift_ptr);
+    verify_results(c_scalar_ptr, c_rvv_ptr);
 
     return 0;
 }
