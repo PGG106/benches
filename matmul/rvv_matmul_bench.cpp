@@ -142,8 +142,52 @@ int main(int argc, char **argv)
 
 // data points
 
-// Baseline: 209.938
+// Baseline: 26.2041
 
-// Autovec: 89.39
+// Autovec: 4.6233
 
-// SIMD : 19.63
+// SIMD : 4.38986
+
+/*
+============================================
+Stats for Scalar Matmul With Mul (vector_matmul_scalar):
+>>Median:       26.2041
+> Average:      26.7766
+> Samples:      100
+> Variance:     1.20965
+> Max:          29.0092
+> Min:          25.9301
+============================================
+
+
+============================================
+Stats for Scalar Matmul With Mul (vector_matmul_scalar):
+>>Median:       4.6233
+> Average:      4.62958
+> Samples:      100
+> Variance:     0.00210862
+> Max:          4.99239
+> Min:          4.44541
+============================================
+============================================
+Stats for AVX Matmul With Mul (vector_matmul_avx):
+>>Median:       4.38986
+> Average:      4.39199
+> Samples:      100
+> Variance:     0.000463008
+> Max:          4.48853
+> Min:          4.35005
+============================================
+Results match!
+
+
+
+
+
+
+
+
+
+
+
+*/
