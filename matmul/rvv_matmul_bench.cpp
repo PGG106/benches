@@ -6,8 +6,8 @@
 #include <string>
 #include "../common/common01.h"
 
-constexpr size_t RUNS = 5;
-constexpr size_t N = 256;
+constexpr size_t RUNS = 1000;
+constexpr size_t N = 1024;
 
 void matmul_scalar(
     const int32_t *__restrict__ a,
@@ -139,3 +139,11 @@ int main(int argc, char **argv)
 
     return 0;
 }
+
+// data points
+
+// Baseline: 209.938
+
+// Autovec: 89.39
+
+// SIMD : 19.63
