@@ -6,8 +6,8 @@
 #include <string>
 #include "../common/common01.h"
 
-constexpr size_t RUNS = 1000;
-constexpr size_t N = 1024;
+constexpr size_t RUNS = 100;
+constexpr size_t N = 512;
 
 int32_t reduce_avx2(const __m256i &vec)
 {
