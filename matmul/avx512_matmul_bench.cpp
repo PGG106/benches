@@ -6,21 +6,8 @@
 #include <string>
 #include "../common/common01.h"
 
-constexpr size_t RUNS = 100;
+constexpr size_t RUNS = 1000;
 constexpr size_t N = 512;
-
-int32_t reduce_avx2(const __m256i &vec)
-{
-    // Horizontal addition
-    // Step 1: Add adjacent pairs
-    __m256i v1 = _mm256_hadd_epi32(vec, vec); // 0, 2, 4, 6, 1, 3, 5, 7
-    __m256i v2 = _mm256_hadd_epi32(v1, v1);   // 0, 4, 1, 5, 2, 6, 3, 7
-
-    // Step 2: Extract the final result
-    int result = _mm256_extract_epi32(v2, 0) + _mm256_extract_epi32(v2, 4);
-
-    return result;
-}
 
 void matmul_scalar(
     const int32_t *__restrict__ a,
@@ -49,18 +36,17 @@ void matmul_avx2(
     {
         for (int i = 0; i < N; ++i)
         {
-            __m256i vec_s = _mm256_setzero_si256();
-            for (int k = 0; k < N; k += 8)
+            __m512i vec_s = _mm512_setzero_si512();
+            for (int k = 0; k < N; k += 16)
             {
                 auto *ptr_a = a + j * N + k; // `a` is row major
                 auto *ptr_b = b + i * N + k; // `b` is col major
-                __m256i vec_a = _mm256_load_si256((__m256i *)ptr_a);
-                __m256i vec_b = _mm256_load_si256((__m256i *)ptr_b);
-                __m256i vec_mul = _mm256_mullo_epi32(vec_a, vec_b);
-                vec_s = _mm256_add_epi32(vec_s, vec_mul);
+                __m512i vec_a = _mm512_load_si512((__m512i *)ptr_a);
+                __m512i vec_b = _mm512_load_si512((__m512i *)ptr_b);
+                __m512i vec_mul = _mm512_mullo_epi32(vec_a, vec_b);
+                vec_s = _mm512_add_epi32(vec_s, vec_mul);
             }
-            const int32_t sum = reduce_avx2(vec_s);
-            c[j * N + i] = sum;
+            c[j * N + i] = _mm512_reduce_add_epi32(vec_s);
         }
     }
 }
@@ -149,44 +135,3 @@ int main(int argc, char **argv)
 
     return 0;
 }
-
-// data points
-
-// Baseline: 26.2041
-
-// Autovec: 4.6233
-
-// SIMD : 4.38986
-
-/*
-============================================
-Stats for Scalar Matmul With Mul (vector_matmul_scalar):
->>Median:       26.2041
-> Average:      26.7766
-> Samples:      100
-> Variance:     1.20965
-> Max:          29.0092
-> Min:          25.9301
-============================================
-
-
-============================================
-Stats for Scalar Matmul With Mul (vector_matmul_scalar):
->>Median:       4.6233
-> Average:      4.62958
-> Samples:      100
-> Variance:     0.00210862
-> Max:          4.99239
-> Min:          4.44541
-============================================
-============================================
-Stats for AVX Matmul With Mul (vector_matmul_avx):
->>Median:       4.38986
-> Average:      4.39199
-> Samples:      100
-> Variance:     0.000463008
-> Max:          4.48853
-> Min:          4.35005
-============================================
-Results match!
-*/
