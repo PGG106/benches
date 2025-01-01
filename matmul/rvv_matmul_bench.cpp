@@ -32,24 +32,24 @@ void vector_matmul(
     const int32_t *__restrict__ b,
     int32_t *__restrict__ c)
 {
-    size_t vlmax = __riscv_vsetvlmax_e32m1();
+    size_t vlmax = __riscv_vsetvlmax_e32m8();
     size_t vl = 0;
     for (int j = 0; j < N; ++j)
     {
         for (int i = 0; i < N; ++i)
         {
-            vint32m1_t vec_s = __riscv_vmv_v_x_i32m1(0, vlmax);
+            vint32m8_t vec_s = __riscv_vmv_v_x_i32m8(0, vlmax);
             vint32m1_t vec_zero = __riscv_vmv_v_x_i32m1(0, vlmax);
-            for (int k = 0; k < N; k += __riscv_vsetvl_e32m1(N - k))
+            for (int k = 0; k < N; k += __riscv_vsetvl_e32m8(N - k))
             {
-                vl = __riscv_vsetvl_e32m1(N - k);
+                vl = __riscv_vsetvl_e32m8(N - k);
                 auto *ptr_a = a + j * N + k;
                 auto *ptr_b = b + i * N + k;
-                vint32m1_t vec_a = __riscv_vle32_v_i32m1(ptr_a, vl);
-                vint32m1_t vec_b = __riscv_vle32_v_i32m1(ptr_b, vl);
-                vec_s = __riscv_vmacc_vv_i32m1(vec_s, vec_a, vec_b, vl);
+                vint32m8_t vec_a = __riscv_vle32_v_i32m8(ptr_a, vl);
+                vint32m8_t vec_b = __riscv_vle32_v_i32m8(ptr_b, vl);
+                vec_s = __riscv_vmacc_vv_i32m8(vec_s, vec_a, vec_b, vl);
             }
-            int sum = __riscv_vmv_x_s_i32m1_i32(__riscv_vredsum_vs_i32m1_i32m1(vec_s, vec_zero, vlmax));
+            int sum = __riscv_vmv_x_s_i32m1_i32(__riscv_vredsum_vs_i32m8_i32m1(vec_s, vec_zero, vlmax));
             c[j * N + i] = sum;
         }
     }
@@ -109,6 +109,37 @@ void bench_rvv(const int32_t *__restrict__ a_ptr,
         }
     }
 }
+
+/*
+============================================
+Stats for Scalar Matmul With Mul (vector_matmul_scalar):
+>>Median:       716.82
+> Average:      716.851
+> Samples:      100
+> Variance:     0.0924051
+> Max:          718.673
+> Min:          716.402
+============================================
+
+============================================
+Stats for Scalar Matmul With Mul (vector_matmul_scalar):
+>>Median:       132.178
+> Average:      132.239
+> Samples:      100
+> Variance:     0.0412433
+> Max:          133.036
+> Min:          131.968
+============================================
+============================================
+Stats for AVX Matmul With Mul (vector_matmul_avx):
+>>Median:       140.075
+> Average:      140.122
+> Samples:      100
+> Variance:     0.0590434
+> Max:          141.12
+> Min:          139.654
+============================================
+*/
 
 int main(int argc, char **argv)
 {
