@@ -27,7 +27,7 @@ void matmul_scalar(
     }
 }
 
-void vector_matmul(
+void vector_matmul_lmul8(
     const int32_t *__restrict__ a,
     const int32_t *__restrict__ b,
     int32_t *__restrict__ c)
@@ -50,6 +50,90 @@ void vector_matmul(
                 vec_s = __riscv_vmacc_vv_i32m8(vec_s, vec_a, vec_b, vl);
             }
             int sum = __riscv_vmv_x_s_i32m1_i32(__riscv_vredsum_vs_i32m8_i32m1(vec_s, vec_zero, vlmax));
+            c[j * N + i] = sum;
+        }
+    }
+}
+
+void vector_matmul_lmul4(
+    const int32_t *__restrict__ a,
+    const int32_t *__restrict__ b,
+    int32_t *__restrict__ c)
+{
+    size_t vlmax = __riscv_vsetvlmax_e32m4();
+    size_t vl = 0;
+    for (int j = 0; j < N; ++j)
+    {
+        for (int i = 0; i < N; ++i)
+        {
+            vint32m4_t vec_s = __riscv_vmv_v_x_i32m4(0, vlmax);
+            vint32m1_t vec_zero = __riscv_vmv_v_x_i32m1(0, vlmax);
+            for (int k = 0; k < N; k += __riscv_vsetvl_e32m4(N - k))
+            {
+                vl = __riscv_vsetvl_e32m4(N - k);
+                auto *ptr_a = a + j * N + k;
+                auto *ptr_b = b + i * N + k;
+                vint32m4_t vec_a = __riscv_vle32_v_i32m4(ptr_a, vl);
+                vint32m4_t vec_b = __riscv_vle32_v_i32m4(ptr_b, vl);
+                vec_s = __riscv_vmacc_vv_i32m4(vec_s, vec_a, vec_b, vl);
+            }
+            int sum = __riscv_vmv_x_s_i32m1_i32(__riscv_vredsum_vs_i32m4_i32m1(vec_s, vec_zero, vlmax));
+            c[j * N + i] = sum;
+        }
+    }
+}
+
+void vector_matmul_lmul2(
+    const int32_t *__restrict__ a,
+    const int32_t *__restrict__ b,
+    int32_t *__restrict__ c)
+{
+    size_t vlmax = __riscv_vsetvlmax_e32m2();
+    size_t vl = 0;
+    for (int j = 0; j < N; ++j)
+    {
+        for (int i = 0; i < N; ++i)
+        {
+            vint32m2_t vec_s = __riscv_vmv_v_x_i32m2(0, vlmax);
+            vint32m1_t vec_zero = __riscv_vmv_v_x_i32m1(0, vlmax);
+            for (int k = 0; k < N; k += __riscv_vsetvl_e32m2(N - k))
+            {
+                vl = __riscv_vsetvl_e32m2(N - k);
+                auto *ptr_a = a + j * N + k;
+                auto *ptr_b = b + i * N + k;
+                vint32m2_t vec_a = __riscv_vle32_v_i32m2(ptr_a, vl);
+                vint32m2_t vec_b = __riscv_vle32_v_i32m2(ptr_b, vl);
+                vec_s = __riscv_vmacc_vv_i32m2(vec_s, vec_a, vec_b, vl);
+            }
+            int sum = __riscv_vmv_x_s_i32m1_i32(__riscv_vredsum_vs_i32m2_i32m1(vec_s, vec_zero, vlmax));
+            c[j * N + i] = sum;
+        }
+    }
+}
+
+void vector_matmul_lmul1(
+    const int32_t *__restrict__ a,
+    const int32_t *__restrict__ b,
+    int32_t *__restrict__ c)
+{
+    size_t vlmax = __riscv_vsetvlmax_e32m1();
+    size_t vl = 0;
+    for (int j = 0; j < N; ++j)
+    {
+        for (int i = 0; i < N; ++i)
+        {
+            vint32m1_t vec_s = __riscv_vmv_v_x_i32m1(0, vlmax);
+            vint32m1_t vec_zero = __riscv_vmv_v_x_i32m1(0, vlmax);
+            for (int k = 0; k < N; k += __riscv_vsetvl_e32m1(N - k))
+            {
+                vl = __riscv_vsetvl_e32m1(N - k);
+                auto *ptr_a = a + j * N + k;
+                auto *ptr_b = b + i * N + k;
+                vint32m1_t vec_a = __riscv_vle32_v_i32m1(ptr_a, vl);
+                vint32m1_t vec_b = __riscv_vle32_v_i32m1(ptr_b, vl);
+                vec_s = __riscv_vmacc_vv_i32m1(vec_s, vec_a, vec_b, vl);
+            }
+            int sum = __riscv_vmv_x_s_i32m1_i32(__riscv_vredsum_vs_i32m1_i32m1(vec_s, vec_zero, vlmax));
             c[j * N + i] = sum;
         }
     }
@@ -96,16 +180,58 @@ void bench_scalar(const int32_t *__restrict__ a_ptr,
     }
 }
 
-void bench_rvv(const int32_t *__restrict__ a_ptr,
-               const int32_t *__restrict__ b_ptr,
-               int32_t *__restrict__ c_avx_mul_ptr)
+void bench_rvv_lmul8(const int32_t *__restrict__ a_ptr,
+                     const int32_t *__restrict__ b_ptr,
+                     int32_t *__restrict__ c_avx_mul_ptr)
 {
     {
         TimerStats te("AVX Matmul With Mul (vector_matmul_avx)");
         for (volatile size_t i = 0; i < RUNS; i++)
         {
             TimerScope ts(te);
-            vector_matmul(a_ptr, b_ptr, c_avx_mul_ptr);
+            vector_matmul_lmul8(a_ptr, b_ptr, c_avx_mul_ptr);
+        }
+    }
+}
+
+void bench_rvv_lmul4(const int32_t *__restrict__ a_ptr,
+                     const int32_t *__restrict__ b_ptr,
+                     int32_t *__restrict__ c_avx_mul_ptr)
+{
+    {
+        TimerStats te("AVX Matmul With Mul (vector_matmul_avx)");
+        for (volatile size_t i = 0; i < RUNS; i++)
+        {
+            TimerScope ts(te);
+            vector_matmul_lmul4(a_ptr, b_ptr, c_avx_mul_ptr);
+        }
+    }
+}
+
+void bench_rvv_lmul2(const int32_t *__restrict__ a_ptr,
+                     const int32_t *__restrict__ b_ptr,
+                     int32_t *__restrict__ c_avx_mul_ptr)
+{
+    {
+        TimerStats te("AVX Matmul With Mul (vector_matmul_avx)");
+        for (volatile size_t i = 0; i < RUNS; i++)
+        {
+            TimerScope ts(te);
+            vector_matmul_lmul2(a_ptr, b_ptr, c_avx_mul_ptr);
+        }
+    }
+}
+
+void bench_rvv_lmul1(const int32_t *__restrict__ a_ptr,
+                     const int32_t *__restrict__ b_ptr,
+                     int32_t *__restrict__ c_avx_mul_ptr)
+{
+    {
+        TimerStats te("AVX Matmul With Mul (vector_matmul_avx)");
+        for (volatile size_t i = 0; i < RUNS; i++)
+        {
+            TimerScope ts(te);
+            vector_matmul_lmul1(a_ptr, b_ptr, c_avx_mul_ptr);
         }
     }
 }
@@ -164,9 +290,25 @@ int main(int argc, char **argv)
 
     bench_scalar(a_ptr, b_ptr, c_scalar_ptr);
 
-    bench_rvv(a_ptr, b_ptr, c_rvv_ptr);
+    bench_rvv_lmul1(a_ptr, b_ptr, c_rvv_ptr);
 
     verify_results(c_scalar_ptr, c_rvv_ptr);
+    wipe(c_rvv_ptr, N * N);
+
+    bench_rvv_lmul2(a_ptr, b_ptr, c_rvv_ptr);
+
+    verify_results(c_scalar_ptr, c_rvv_ptr);
+    wipe(c_rvv_ptr, N * N);
+
+    bench_rvv_lmul4(a_ptr, b_ptr, c_rvv_ptr);
+
+    verify_results(c_scalar_ptr, c_rvv_ptr);
+    wipe(c_rvv_ptr, N * N);
+
+    bench_rvv_lmul8(a_ptr, b_ptr, c_rvv_ptr);
+
+    verify_results(c_scalar_ptr, c_rvv_ptr);
+    wipe(c_rvv_ptr, N * N);
 
     return 0;
 }
