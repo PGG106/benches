@@ -1132,11 +1132,12 @@ int s000_vec()
 	start_t = clock();
 	size_t vlmax = __riscv_vsetvlmax_e32m1();
 	vfloat32m1_t one_vec = __riscv_vfmv_v_f_f32m1(1, vlmax);
+	size_t vl = 0;
 	for (int nl = 0; nl < 2 * ntimes; nl++)
 	{
-		for (int i = 0; i < lll; i += 8)
+		for (int i = 0; i < lll; i += vl)
 		{
-			size_t vl = __riscv_vsetvl_e32m1(lll - i);
+			vl = __riscv_vsetvl_e32m1(lll - i);
 			vfloat32m1_t vec_a = __riscv_vle32_v_f32m1(&Y[i], vl);
 			vec_a = __riscv_vfadd_vf_f32m1(vec_a, 1, vl);
 			__riscv_vse32_v_f32m1(&X[i], vec_a, vl);
